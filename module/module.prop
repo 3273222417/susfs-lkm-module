@@ -1,6 +1,6 @@
 id=susfs_lkm_loader
 name=SUSFS LKM Loader
-version=0.1.0
-versionCode=1
+version=0.2.0
+versionCode=2
 author=matsuzaka-yuki; LKM by inforcqb
-description=KernelSU-compatible loader for pinned SUSFS LKM (arm64 android15-6.6). No rule management. Reboot required.
+description=KernelSU-compatible SUSFS loader with automatic selection across 6 upstream arm64 KMIs (5.10-6.6). No rule management. Reboot required.

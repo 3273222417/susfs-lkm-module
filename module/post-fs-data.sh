@@ -7,10 +7,11 @@ exec > "$MODDIR/load.log" 2>&1
 echo "SUSFS loader: $(date)"
 # Read the real release: uname may already be spoofed by another SUSFS implementation.
 REAL_KERNEL=$(cat /proc/sys/kernel/osrelease) || exit 1
-case "$REAL_KERNEL" in
-  6.6.*-android15-*) ;;
-  *) echo "Refusing unsupported kernel: $REAL_KERNEL"; exit 1 ;;
-esac
+. "$MODDIR/kmi.sh" || { echo "Missing KMI selector."; exit 1; }
+KMI=$(select_kmi "$REAL_KERNEL") || { echo "Refusing unsupported kernel: $REAL_KERNEL"; exit 1; }
+LKM="$MODDIR/lib/susfs_guard_lkm-$KMI.ko"
+[ -s "$LKM" ] || { echo "Missing packaged LKM for $KMI."; exit 1; }
+echo "Selected kernel KMI: $KMI"
 "$MODDIR/bin/susfs_probe"
 RESULT=$?
 case "$RESULT" in
@@ -20,7 +21,7 @@ case "$RESULT" in
 esac
 # The upstream loader performs kallsyms relocation and its own checks. No fallback plain insmod,
 # forced unload, rule mutation, global clearing or changes to /data/adb/ksu are performed here.
-"$MODDIR/bin/susfs_insmod" "$MODDIR/susfs_guard_lkm-android15-6.6.ko" expose_proc=1
+"$MODDIR/bin/susfs_insmod" "$LKM" expose_proc=1
 RESULT=$?
 [ "$RESULT" = 0 ] || { echo "Upstream loader failed: $RESULT"; exit "$RESULT"; }
 "$MODDIR/bin/susfs_probe" || { echo "Load returned success but protocol probe failed."; exit 1; }

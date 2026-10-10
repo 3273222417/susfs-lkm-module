@@ -7,7 +7,14 @@ Not an upstream release, not a Magisk-supported module, and not a boot image.
 
 ## Scope
 
-- Initial package: arm64, **android15-6.6 kernel KMI** only (not Android OS version).
+- One arm64 ZIP packages all six KMIs provided by the pinned upstream release:
+  **android12-5.10, android13-5.10, android13-5.15, android14-5.15,
+  android14-6.1, android15-6.6** (not Android OS versions).
+- Install and every boot select the matching binary from the real
+  `/proc/sys/kernel/osrelease`. No nearest-version fallback is used.
+- This is **not universal kernel compatibility**: android16-6.12, android17-6.18,
+  non-GKI/unrecognized releases and non-arm64 devices are unsupported. Vendor ABI
+  differences can still prevent loading within a listed KMI.
 - KernelSU installs it under `/data/adb/modules/susfs_lkm_loader/` after staging updates.
 - Loads the pinned `.ko` at the standard module `post-fs-data` stage using the upstream loader.
 - Detects an existing SUSFS interface before loading; refuses stacking, ambiguous probes and
@@ -46,11 +53,23 @@ Requires Python 3, network access and Android NDK on Linux. Set `ANDROID_NDK_HOM
 python3 tools/build.py
 ```
 
-Output: `dist/susfs-lkm-module-0.1.0-android15-6.6.zip`.
+Output: `dist/susfs-lkm-module-0.2.0-arm64-multi-kmi.zip`.
 Upstream binaries are pinned and checked against SHA-256 from the GitHub release assets.
 The corresponding pinned complete upstream source archive, wrapper probe source, license and
 provenance are included in each ZIP. No upstream kernel functionality is reimplemented here.
 Package building does not install or load the module.
+
+Host checks (mock loaders only, no privileged kernel operations):
+
+```sh
+python3 -m unittest discover -s tests -v
+sh -n module/kmi.sh module/customize.sh module/post-fs-data.sh
+```
+
+Only android15-6.6 has prior on-device manual loading evidence. Multi-KMI boot
+selection is host-tested; actual loading/booting on the other five KMIs remains
+unverified. Updating this ZIP does not unload the active implementation: reboot
+manually to activate the update, with backups and a module-disable recovery path.
 
 ## License and attribution
 
