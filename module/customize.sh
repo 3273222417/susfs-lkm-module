@@ -4,7 +4,7 @@
 [ "$ARCH" = arm64 ] || abort "Only arm64 is packaged."
 REAL_KERNEL=$(cat /proc/sys/kernel/osrelease) || abort "Cannot read real kernel release."
 . "$MODPATH/kmi.sh" || abort "Missing KMI selector."
-KMI=$(select_kmi "$REAL_KERNEL") || abort "Unsupported kernel KMI: $REAL_KERNEL."
+KMI=$(select_kmi "$REAL_KERNEL" "$MODPATH") || abort "Unsupported kernel KMI: $REAL_KERNEL."
 [ -s "$MODPATH/lib/susfs_guard_lkm-$KMI.ko" ] || abort "Missing packaged LKM for $KMI."
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 set_perm "$MODPATH/post-fs-data.sh" 0 0 0755

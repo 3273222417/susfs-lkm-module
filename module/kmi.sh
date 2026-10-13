@@ -1,13 +1,16 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # Match the real kernel release, not the Android OS version or spoofable uname.
+# The packaged KMIs are listed in "$2/kmis" (one <android-os>-<kver> per line),
+# so a new upstream KMI needs no change here.
 select_kmi() {
-  case "$1" in
-    5.10.*-android12-*) echo android12-5.10 ;;
-    5.10.*-android13-*) echo android13-5.10 ;;
-    5.15.*-android13-*) echo android13-5.15 ;;
-    5.15.*-android14-*) echo android14-5.15 ;;
-    6.1.*-android14-*) echo android14-6.1 ;;
-    6.6.*-android15-*) echo android15-6.6 ;;
-    *) return 1 ;;
-  esac
+  rel="$1"
+  while IFS= read -r kmi; do
+    [ -n "$kmi" ] || continue
+    os="${kmi%-*}"
+    kver="${kmi#*-}"
+    case "$rel" in
+      "$kver".*-"$os"-*) echo "$kmi"; return 0 ;;
+    esac
+  done < "$2/kmis"
+  return 1
 }

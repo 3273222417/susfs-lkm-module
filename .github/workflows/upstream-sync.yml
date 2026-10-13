@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-2.0-only
+name: upstream-sync
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve latest upstream release
+        id: sync
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          tag="$(python tools/sync.py)"; code=$?
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 100 ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already at $tag."
+          elif [ "$code" -eq 0 ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "New upstream release: $tag"
+          else
+            exit "$code"
+          fi
+
+      - name: Host tests
+        if: steps.sync.outputs.changed == 'true'
+        run: python tests/test_loader.py
+
+      - uses: nttld/setup-ndk@v1
+        if: steps.sync.outputs.changed == 'true'
+        with:
+          ndk-version: r27c
+
+      - name: Build module ZIP
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/build.py
+
+      - name: Commit refreshed pin
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add upstream.lock.json module/module.prop
+          git commit -m "Pin upstream ${{ steps.sync.outputs.tag }}"
+          git push
+
+      - name: Publish release
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.sync.outputs.tag }}"
+          notes="Tracks upstream LKM release [$tag](https://github.com/inforcqb/susfs4ksu-lkm/releases/tag/$tag). Multi-KMI arm64, hash-verified against upstream.lock.json."
+          gh release create "$tag" dist/*.zip --title "$tag" --notes "$notes" \
+            || gh release upload "$tag" dist/*.zip --clobber
