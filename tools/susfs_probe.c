@@ -20,8 +20,10 @@ int main(void)
             puts("Existing SUSFS control interface detected (not a compatibility guarantee).");
             return 0;
         }
-        // Untouched sentinel with permission failure is not proof of absence.
-        if (result == -1 && errno != EINVAL && errno != ENOSYS) return 12;
+        // Reboot(2) must reject this magic with -EINVAL (or -ENOSYS). Returning success means
+        // something else consumed the call and left the reply untouched, and any other errno
+        // (a seccomp/denial path) hides the truth too: both are "cannot tell", not "absent".
+        if (result != -1 || (errno != EINVAL && errno != ENOSYS)) return 12;
     }
     puts("No responding SUSFS version/variant interface.");
     return 10;

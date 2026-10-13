@@ -8,7 +8,8 @@ echo "SUSFS loader: $(date)"
 # Read the real release: uname may already be spoofed by another SUSFS implementation.
 REAL_KERNEL=$(cat /proc/sys/kernel/osrelease) || exit 1
 . "$MODDIR/kmi.sh" || { echo "Missing KMI selector."; exit 1; }
-KMI=$(select_kmi "$REAL_KERNEL" "$MODDIR") || { echo "Refusing unsupported kernel: $REAL_KERNEL"; exit 1; }
+KMI=$(select_kmi "$REAL_KERNEL" "$MODDIR") \
+  || { echo "Refusing unrecognized kernel release (no packaged KMI matches): $REAL_KERNEL"; exit 1; }
 LKM="$MODDIR/lib/susfs_guard_lkm-$KMI.ko"
 [ -s "$LKM" ] || { echo "Missing packaged LKM for $KMI."; exit 1; }
 echo "Selected kernel KMI: $KMI"

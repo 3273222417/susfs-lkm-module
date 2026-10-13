@@ -22,35 +22,43 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Resolve latest upstream release
+      - name: Resolve pin and release state
         id: sync
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set +e
-          tag="$(python tools/sync.py)"; code=$?
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          if [ "$code" -eq 100 ]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Already at $tag."
-          elif [ "$code" -eq 0 ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "New upstream release: $tag"
-          else
-            exit "$code"
+          python tools/sync.py > /dev/null; code=$?
+          set -e
+          if [ "$code" -eq 100 ]; then changed=false
+          elif [ "$code" -eq 0 ]; then changed=true
+          else exit "$code"
           fi
+          # Read the tag from the lock, not from sync's stdout: after an update the lock is the
+          # authoritative pin, and unchanged runs still need the tag to check for a release.
+          tag="$(python -c "import json;print(json.load(open('upstream.lock.json'))['tag'])")"
+          # The pinned tag can be ahead of the published releases (for example when the pin was
+          # committed by hand): a missing release is republished from the same lock, unchanged.
+          if gh release view "$tag" > /dev/null 2>&1; then missing=false; else missing=true; fi
+          if [ "$changed" = true ] || [ "$missing" = true ]; then build=true; else build=false; fi
+          {
+            echo "tag=$tag"
+            echo "changed=$changed"
+            echo "build=$build"
+          } >> "$GITHUB_OUTPUT"
+          echo "pin=$tag changed=$changed missing=$missing build=$build"
 
       - name: Host tests
-        if: steps.sync.outputs.changed == 'true'
-        run: python tests/test_loader.py
+        if: steps.sync.outputs.build == 'true'
+        run: python -m unittest discover -s tests -v
 
       - uses: nttld/setup-ndk@v1
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.sync.outputs.build == 'true'
         with:
           ndk-version: r27c
 
       - name: Build module ZIP
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.sync.outputs.build == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python tools/build.py
@@ -65,7 +73,7 @@ jobs:
           git push
 
       - name: Publish release
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.sync.outputs.build == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

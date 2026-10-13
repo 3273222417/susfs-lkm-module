@@ -2,19 +2,19 @@
 
 Independent **KernelSU-compatible module ZIP**, packaging the
 [inforcqb/susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm) release
-`v2.3.0-r17-fix-51c2169` (`51c2169e728c8c5c0f47e733839f6d1f187d504e`).
+`v2.3.0-r18.1` (`9eee87c6a18ee5c769e9f1d59f496b0eb711b7c8`).
 Not an upstream release, not a Magisk-supported module, and not a boot image.
 
 ## Scope
 
-- One arm64 ZIP packages all six KMIs provided by the pinned upstream release:
+- One arm64 ZIP packages all eight KMIs provided by the pinned upstream release:
   **android12-5.10, android13-5.10, android13-5.15, android14-5.15,
-  android14-6.1, android15-6.6** (not Android OS versions).
+  android14-6.1, android15-6.6, android16-6.12, android17-6.18** (not Android OS versions).
 - Install and every boot select the matching binary from the real
   `/proc/sys/kernel/osrelease`. No nearest-version fallback is used.
-- This is **not universal kernel compatibility**: android16-6.12, android17-6.18,
-  non-GKI/unrecognized releases and non-arm64 devices are unsupported. Vendor ABI
-  differences can still prevent loading within a listed KMI.
+- This is **not universal kernel compatibility**: non-GKI/unrecognized releases and
+  non-arm64 devices are unsupported. Vendor ABI differences can still prevent loading
+  within a listed KMI.
 - KernelSU installs it under `/data/adb/modules/susfs_lkm_loader/` after staging updates.
 - Loads the pinned `.ko` at the standard module `post-fs-data` stage using the upstream loader.
 - Detects an existing SUSFS interface before loading; refuses stacking, ambiguous probes and
@@ -53,7 +53,7 @@ Requires Python 3, network access and Android NDK on Linux. Set `ANDROID_NDK_HOM
 python3 tools/build.py
 ```
 
-Output: `dist/susfs-lkm-module-0.2.0-arm64-multi-kmi.zip`.
+Output: `dist/susfs-lkm-module-v2.3.0-r18.1-arm64-multi-kmi.zip`.
 Upstream binaries are pinned and checked against SHA-256 from the GitHub release assets.
 The corresponding pinned complete upstream source archive, wrapper probe source, license and
 provenance are included in each ZIP. No upstream kernel functionality is reimplemented here.
@@ -67,7 +67,7 @@ sh -n module/kmi.sh module/customize.sh module/post-fs-data.sh
 ```
 
 Only android15-6.6 has prior on-device manual loading evidence. Multi-KMI boot
-selection is host-tested; actual loading/booting on the other five KMIs remains
+selection is host-tested; actual loading/booting on the other seven KMIs remains
 unverified. Updating this ZIP does not unload the active implementation: reboot
 manually to activate the update, with backups and a module-disable recovery path.
 
