@@ -29,6 +29,10 @@ TAGLESS = {"6.1.176-Radioactive-V1.3-+": "android14-6.1", "6.6.118-vendor": "and
 # real ABI is unknown, so these must be refused like any other unrecognized release.
 MANGLED = ("6.6.bad-android15-vendor", "6.6.118-vendor-android15-8",
            "6.6-android15-8", "6.6.118.android15-8")
+# An Android tag in a different case is still an Android tag: the strict match is
+# case-sensitive, so a case variant must be refused rather than fall through to the
+# version-only fallback and be picked by version alone.
+CASE_VARIANT = ("6.6.118-ANDROID14-1", "6.6.118-Android15-8")
 # Same KMI, variants of the canonical shape: the KMI generation (and anything after it) is
 # optional and must not stop a correct match.
 CANONICAL_SUFFIXES = ("", "-8", "-8-g3a3f1c2-ab1234", "-0-gbce1b2c3")
@@ -92,7 +96,7 @@ class LoaderTests(unittest.TestCase):
         self.assertEqual(self.run_loader(10), (1, True))
 
     def test_mangled_releases_never_select_a_kmi(self):
-        for kernel in MANGLED:
+        for kernel in (*MANGLED, *CASE_VARIANT):
             with self.subTest(kernel=kernel):
                 self.assertEqual(self.run_loader(10, kernel=kernel), (1, False))
 
@@ -124,7 +128,7 @@ class LoaderTests(unittest.TestCase):
 
     def test_install_selection_and_rejection(self):
         accepted = {*KMIS, *TAGLESS}
-        for kernel in (*KMIS, *TAGLESS, *UNPACKAGED, *MANGLED):
+        for kernel in (*KMIS, *TAGLESS, *UNPACKAGED, *MANGLED, *CASE_VARIANT):
             with self.subTest(kernel=kernel), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 shutil.copytree(ROOT / "module", root / "module")

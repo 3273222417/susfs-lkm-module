@@ -38,8 +38,12 @@ select_kmi() {
   # Only a release with NO Android tag at all may take this path. A tag that is present but
   # did not match the strict shape is a real mismatch (e.g. 6.6.118-android14-1-test on a 6.6
   # kernel, whose only packaged KMI is android15-6.6), and overriding it by version alone
-  # would load a binary the release explicitly disowns.
-  case "$rel" in *android[0-9]*) return 1 ;; esac
+  # would load a binary the release explicitly disowns. The check is case-insensitive on
+  # purpose: the strict match above is case-sensitive, so a tag that merely differs in case
+  # must be refused here as well instead of falling through to the version match.
+  case "$rel" in
+    *[Aa][Nn][Dd][Rr][Oo][Ii][Dd][0-9]*) return 1 ;;
+  esac
   # Match on the kernel version alone, keeping the numeric-patch guard, and only when that
   # version maps to a single packaged KMI: a KMI is ABI-stable across all of its patch
   # levels, so an unambiguous version cannot be a wrong pick, while a version shared by two
